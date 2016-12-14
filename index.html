@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <audio id="boom" src="sound/bricks.mp3" preload="auto"></audio>
+	<audio id="theme" src="sound/angry_birds.mp3" preload="auto"></audio>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+        }
+        
+        #viewport {
+            position: relative;
+            height: 100%;
+            background-image: url('images/angry2.png');
+            background-size: cover;
+        }
+		
+		#GUI
+        {
+            position:absolute;
+            top:0;
+            height:100%;
+            width:100%;
+            margin:0;
+            padding:0;
+        }
+    </style>
+	<title> PR2 - Matemàtiques i física per a la Multimèdia</title>
+</head>
+
+<body>
+
+<div id = "GUI">
+</div>
+	
+    <script src="js/physicsjs-full.js"></script>
+	<script src="js/jquery.js"></script>
+	<script src="js/raphael.js"></script>
+	<script src="js/Tween.js"></script>
+    <script src="js/require.js"></script>
+	<script src="js/three.js"></script>
+	<script src="js/ufo.js"></script>
+	<script src="js/player-behavior.js"></script>
+	<script src="js/player.js"></script>
+	<script src="js/require.js"></script>
+					
+
+	<div style="height: 100vh; width: 100vw; margin:auto;" id = "viewport">
+<script>
+/* *************************** FUNCIO AUDIO THEME SONG EN MODE REPETICIÓ ***************************** */	
+	
+	function setUpAudio(){
+			myAudio = new Audio('sound/angry_birds3.mp3'); 
+			myAudio.addEventListener('ended', function() {
+				this.currentTime = 0;
+				this.play();
+			}, false);
+			myAudio.play();
+			}
+			
+	
+	
+/*	
+	function setUpAudioPause(){
+		myAudio = new Audio('sound/angry_birds3.mp3'); 
+		myAudio.addEventListener('ended', function() {
+			this.currentTime = 0;
+			this.pause();
+		}, false);
+		myAudio.pause()
+	}
+*/	
+	//if(audioElement.duration;)
+/* *************************** FI AUDIO THEME SONG EN MODE REPETICIÓ ***************************** */	
+		
+		//Variables
+		var minionInicialPosX;
+		//Inici materials
+		var MaderaPosX1;
+		var MaderaPosY1;
+		var MaderaPosX2;
+		var MaderaPosY2;
+		var w = $(window).width();
+		var h = $(window).height();
+		//var draw = Raphael(0, 0, w, h); test per a llibrería cannon.js i raphael.js
+		var ox = 20;
+		var oy = h - 20;
+		var golpeado1 = true;
+		var golpeado2 = false;
+		var nogolpeado = false;
+		//Variables que emprarem per pasar de nivell, al arribar a cert punts o hits, pasam a nivell 2
+		var puntuacion = 0;
+		//Nivel del programa
+		var nivelActual = 1;							// HI HA 3 NIVELLS - A poder elegir
+		//Inici dels minions
+		var minionInicialPosX;
+		var minionInicialPosY;
+		var escena;
+		var camera;
+		//Variables text 1
+		var textX1;
+		var textY1;
+		//Variables text2
+		var textX2;
+		var textY2;
+		var step = 1;
+		var inici = true;
+		//Tipus dispar
+		var disparPrincipal = 1;	
+
+		
+        Physics({
+            timestep: 3
+        }, function(world) {
+
+<!-- ANTES DE INICIAR EL JUEGO, APRETAMOS EL ESPACIO Y ACTIVAMOS TODAS LAS FUNCIONES -->
+		 window.onload = function() {
+		 document.body.className = 'before-game';
+		 textX1 = 0;
+		 textY1 = -100;
+		 crearTitlePre(textX1, textY1, 'images/before_game.png', 600, 50);
+		  var par = parent;
+			try {
+			  par && par.innerWidth;
+			} catch( e ){
+			  par = window;
+			}
+		  var inGame = false;
+		  document.addEventListener('keydown', function( e ){
+			
+			if (!inGame && e.keyCode === 32){
+			  document.body.className = 'in-game';
+			  //this.remove(titlePre);
+			  inGame = true;
+			  iniciarNivel(nivelActual);
+			  //alert(step);
+			}
+			
+		  });
+		  }
+
+            // bounds of the window
+            var viewWidth = window.innerWidth,
+                viewHeight = window.innerHeight,
+                viewportBounds = Physics.aabb(0, 0, window.innerWidth, window.innerHeight),
+                edgeBounce, renderer;
+
+            // *** CANVI: SONS ***
+            var boom = document.getElementById("boom");
+			var theme = document.getElementById("theme");
+
+            // *** CANVI: renderer canvas
+            renderer = Physics.renderer('canvas', {
+                el: 'viewport'
+            });
+            // add the renderer
+            world.add(renderer);
+            // render on each step
+            world.on('step', function() {
+                world.render();
+            });
+            // add the interaction
+            world.add(Physics.behavior('interactive', {
+                el: renderer.container
+            }));
+          
+            // constrain objects to these bounds
+            edgeBounce = Physics.behavior('edge-collision-detection', {
+                aabb: viewportBounds,
+                restitution: 0.2,
+                cof: 0.8
+            });
+
+            // resize events
+            window.addEventListener('resize', function() {
+
+                // as of 0.7.0 the renderer will auto resize... so we just take the values from the renderer
+                viewportBounds = Physics.aabb(0, 0, renderer.width, renderer.height);
+                // update the boundaries
+                edgeBounce.setAABB(viewportBounds);
+
+            }, true);
+
+			//Variables per obtenir el centre del 'canvas'
+			var centroX = renderer.width / 2;
+			var centroY = renderer.height / 2;
+			
+			function getWidth() {
+                    if (self.innerHeight) { return self.innerWidth; }
+                    if (document.documentElement && document.documentElement.clientHeight) { return document.documentElement.clientWidth;}
+                    if (document.body) {return document.body.clientWidth;}
+                }
+            function getHeight() {
+                    if (self.innerHeight) {return self.innerHeight;}
+                    if (document.documentElement && document.documentElement.clientHeight) {return document.documentElement.clientHeight;}
+                    if (document.body) {return document.body.clientHeight;}
+                }
+			function S( n )
+				{
+					return n * getWidth() / 600;
+				}
+				
+			function A( n )
+				{
+					return n * getHeight() / 600;
+				}
+			
+//*********************************** INICIAR GAME *********************************************************
+			//iniciarNivel(nivelActual);
+			function iniciarNivel(level){
+			setUpAudio();
+			var nivelAct = level;
+			//alert('hi');
+			eliminarTitlePre();
+			nivells();
+			//Physics.body(titlePre, hidden=true); 
+			//theme.currentTime = 0; // inicialitza posició so
+            //theme.play(); // reprodueix so
+			function nivells(nivelAct){
+					switch (level)
+							{
+							case 1:
+								{
+								minionInicialPosX = 100;														
+								minionInicialPosY = 365;
+								crearMinion(minionInicialPosX, minionInicialPosY);
+								textX1 = 0;
+								textY1 = -400;
+								crearTitle(textX1, textY1, 'images/title.png', 600, 50);
+								textX1 = 0;
+								textY1 = -350;
+								crearTitle(textX1, textY1, 'images/title2.png', 300, 50);
+								crearSuelo()
+							//	alert('weah');
+							break;
+							
+							}
+							case 2:{
+								//puntuacion = 0;
+								//alert(puntuacion);
+								MaderaPosX1 = 100;														
+								MaderaPosY1 = 65;
+								MaderaPosX2 = -25;														
+								MaderaPosY2 = 250;
+								crearMaderaHor(MaderaPosX1, MaderaPosY1);
+								crearMaderaVer(MaderaPosX2, MaderaPosY2);
+								MaderaPosX2 = 225;														
+								MaderaPosY2 = 250;
+								crearMaderaVer(MaderaPosX2, MaderaPosY2);
+								//alert('weah2');
+								minionInicialPosX = 100;														
+								minionInicialPosY = 0;
+								crearMinion(minionInicialPosX, minionInicialPosY);
+								minionInicialPosX = 300;														
+								minionInicialPosY = 300;
+								crearMinion(minionInicialPosX, minionInicialPosY);
+								textX1 = 0;
+								textY1 = -400;
+								crearTitle(textX1, textY1, 'images/title.png', 600, 50);
+								textX1 = 0;
+								textY1 = -350;
+								crearTitle(textX1, textY1, 'images/title2.png', 300, 50);
+								crearSuelo()
+								break;
+								
+							}
+							case 3:{
+								//puntuacion = 0;
+								//alert(puntuacion);
+								MaderaPosX1 = 110;														
+								MaderaPosY1 = 65;
+								MaderaPosX2 = 0;														
+								MaderaPosY2 = 250;
+								crearMaderaHor(MaderaPosX1, MaderaPosY1);
+								crearPiedra(MaderaPosX2, MaderaPosY2);
+								MaderaPosX2 = 225;														
+								MaderaPosY2 = 250;
+								crearMaderaVer(MaderaPosX2, MaderaPosY2);
+								//alert('weah2');
+								minionInicialPosX = 100;														
+								minionInicialPosY = 20;
+								crearMinion(minionInicialPosX, minionInicialPosY);
+								textX1 = 0;
+								textY1 = -400;
+								crearTitle(textX1, textY1, 'images/title.png', 600, 50);
+								textX1 = 0;
+								textY1 = -350;
+								crearTitle(textX1, textY1, 'images/title2.png', 300, 50);
+								crearSuelo()
+								//crearCaixa();
+								break;
+							}
+							}
+							}
+/* ****************************** METODOLOGIA DISPARS ****************************************************************/
+							 // CANVI: eliminats timeout del projectil i atractor
+								var contador = 6;				
+								  //  do{
+								var shoot = level;
+								metoDispars(shoot);
+	
+								
+								function metoDispars(shoot){
+									var dispar = shoot;
+									//alert(dispar);
+									
+										if(dispar===1){
+											Dispar1();
+											
+										}if(dispar===2){
+											Dispar2();
+										
+										}if(dispar ===3){
+											Dispar3();
+																				
+											}
+										
+										
+										}
+										
+										function Dispar1(){
+											world.on({ // Dispar de projectil "poke", es a dir sense aturar
+												'interact:poke': function(pos) {
+												contador = contador -1;
+												//alert(contador);
+													world.add(Physics.body('circle', {
+														label: 'ball', // CANVI: etiqueta per detecció col·lisions
+														x: 100,
+														y: viewHeight - 120,
+														vx: 0.6,
+														vy:-0.2, // CANVI: afegida petita velocitat inicial aleatòria
+														mass: 6, // CANVI: massa projectil
+														radius: 15, // CANVI: radi projectil
+														restitution: 0.99,
+														angularVelocity: 0,
+														styles: {
+															src: 'images/bomb.png', // afegir textura imatge al projectil
+															width: 30,
+															height: 30
+														}
+													}))//;killMinion2();		
+												
+												},
+												'interact:move': function(pos) {
+												},
+												'interact:release': function() {
+												}
+
+
+											});
+										}
+										function Dispar2(){
+											world.on({ // Dispar de projectil "poke", es a dir sense aturar
+												'interact:poke': function(pos) {
+												contador = contador -1;
+												//alert(contador);
+													world.add(Physics.body('circle', {
+														label: 'ball2', 
+														x: 100,
+														y: viewHeight - 300,
+														vx: 0.6,
+														vy:-0.2,
+														mass: 20, 
+														radius: 15, 
+														restitution: 0.99,
+														angularVelocity: 0,
+														styles: {
+															src: 'images/bomb2.png', 
+															width: 30,
+															height: 30
+														}
+													}))//;killMinion2();		
+												
+												},
+												'interact:move': function(pos) {
+												},
+												'interact:release': function() {
+												}
+
+
+											});	
+											}
+											
+											function Dispar3(){
+												world.on({ // Dispar de projectil "poke", es a dir sense aturar
+												'interact:poke': function(pos) {
+												contador = contador -1;
+												//alert(contador);
+													world.add(Physics.body('circle', {
+														label: 'ball3', 
+														x: 100,
+														y: viewHeight - 480,
+														vx: 0.6,
+														vy:-0.2, 
+														mass: 6,
+														radius: 15, 
+														restitution: 0.99,
+														angularVelocity: 0,
+														styles: {
+															src: 'images/bomb3.png', 
+															width: 30,
+															height: 30
+														}
+													}))//;killMinion2();		
+												
+												},
+												'interact:move': function(pos) {
+												},
+												'interact:release': function() {
+												}
+
+
+											});
+											}
+		
+			}
+			
+			
+/* ****************************** METODOLOGIA DISPARS ****************************************************************/
+
+//*********************************** FI INICIAR GAME *********************************************************		
+			
+			$('body').mousemove(function(e) {
+			  var dx = e.pageX - ox;
+			  var dy = e.pageY - oy;
+			  var angle = Math.atan2(dy, dx) / Math.PI * 180;
+			});
+			
+			
+			/*
+			var img2 = ('images/stone3.png'); // imatge normal o vermella
+			ball = Physics.body('circle', {
+					// place the centroid of the rectangle at (300, 200)
+					label: 'ball',
+					width: 50,
+					height: 50,
+					mass:10000,
+					styles: {
+                        src: img2,
+                    }
+			});
+			world.add(ball);
+			*/
+//****************************** CREAR MINION **************************************************
+			function crearMinion(posX, posY){
+				var img2 = ('images/pig1.png'); // imatge normal o vermell
+				var wall = Physics.body('circle', {
+						// place the centroid of the rectangle at (300, 200)
+						label: 'minion',
+						radius: 20,
+						x: centroX + (minionInicialPosX),
+						y: centroY + (minionInicialPosY),
+						mass:100,
+						styles: {
+						  src: img2,
+						  width: 40,
+						  height: 40,
+						}
+						,//treatment : 'static'
+				});
+				world.add(wall);
+			}
+//****************************** FIN CREAR MINION **************************************************
+
+
+//****************************** CAMBIAR MINION **************************************************
+			/*function cambiarMinion(imagen){
+				//var img2 = ('images/pig1.png'); // imatge normal o vermell
+				var minionCanvi = Physics.body('circle', {
+						// place the centroid of the rectangle at (300, 200)
+						styles: {
+						  src: imagen,
+						}
+						,//treatment : 'static'
+				});
+				world.add(minionCanvi);
+				world.remove(wall);
+			}*/
+
+
+
+//****************************** FIN CAMBIAR MINION **************************************************
+
+
+//****************************** CREAR MATERIAL MADERA **************************************************
+			function crearMaderaHor(posX, posY){
+				var img2 = ('images/woodnew1.jpg');
+				var wall = Physics.body('rectangle', {
+						label: 'maderahoriz',
+						width: 300,
+						height: 50,
+						x: centroX + (MaderaPosX1),
+						y: centroY + (MaderaPosY1),
+						mass:100,
+						styles: {
+						  src: img2,
+						  width: 300,
+						  height: 50,
+						}
+						,//treatment : 'static'
+				});
+				world.add(wall);
+			}
+			
+			function crearMaderaVer(posX, posY){
+				var img2 = ('images/wood2.png');
+				var wallmadera = Physics.body('rectangle', {
+						label: 'maderaverti',
+						width: 50,
+						height: 300,
+						x: centroX + (MaderaPosX2),
+						y: centroY + (MaderaPosY2),
+						mass:100,
+						styles: {
+						  src: img2,
+						  width: 50,
+						  height: 300,
+						}
+						,//treatment : 'static'
+				});
+				world.add(wallmadera);
+			}
+//****************************** FI CREAR MATERIAL MADERA **************************************************
+
+//****************************** CREAR MATERIAL PIEDRA **************************************************
+			function crearPiedra(posX, posY){
+				var img2 = ('images/stonehori.png');
+				var wallpiedra = Physics.body('rectangle', {
+						label: 'piedra',
+						width: 50,
+						height: 300,
+						x: centroX + (MaderaPosX2),
+						y: centroY + (MaderaPosY2),
+						mass:500,
+						styles: {
+						  src: img2,
+						  width: 50,
+						  height: 300,
+						}
+						,//treatment : 'static'
+				});
+				world.add(wallpiedra);
+			}
+
+//****************************** FI CREAR MATERIAL PIEDRA **************************************************
+
+//****************************** CREAR TEXT TITOL **************************************************
+				function crearTitle(textX1, textY1, imgtitle, mida, mida2){
+				//var imgtitle = ('images/title.png');
+				var title = Physics.body('rectangle', {
+						label: 'title1',
+						width: 300,
+						height: 50,
+						x: centroX +textX1,
+						y: centroY +textY1,
+						mass:-1,
+						styles: {
+						  src: imgtitle,
+						  width: mida,
+						  height: mida2,
+						}
+						,treatment : 'static'
+				});
+				world.add(title);
+				}
+			
+//****************************** FI CREAR TEXT TITOL **************************************************
+
+
+
+//****************************** CREAR TEXT TITOL ABANS COMENCAMENT JOC **************************************************
+					var titlePre;
+					
+					function crearTitlePre(textX1, textY1, imgtitle, mida, mida2){
+					//var imgtitle = ('images/title.png');
+					titlePre = Physics.body('rectangle', {
+							label: 'title1',
+							width: 300,
+							height: 50,
+							x: centroX +textX1,
+							y: centroY +textY1,
+							mass:-1,
+							styles: {
+							  src: imgtitle,
+							  width: mida,
+							  height: mida2,
+							}
+							,treatment : 'static'
+					});
+						world.add(titlePre);
+					}
+					
+					//Quin cacau per eliminar això, una tonteria de text, tot per no definir com a variable global el titlePre
+					function eliminarTitlePre(){
+						world.remove(titlePre);
+					}
+				
+			
+//****************************** FI CREAR TEXT TITOL **************************************************
+
+
+				/*	function tocadoMinion()
+						{
+						//alert('llega aquí?');
+							var minionTocado = Physics.body('circle', { 
+									styles: {
+										src: 'img/pig2.png',
+										width: 40,
+										height: 40,
+									}
+									,name : 'tocado1'
+								});
+							world.add(minionTocado);
+							world.remove(wall);			
+					}*/
+
+			function crearSuelo(){
+				var img2 = ('images/suelo.png');
+				var rect = Physics.body('rectangle', {
+					// place the centroid of the rectangle at (300, 200)
+					x: centroX,
+					y: h -29,
+					width: w,
+					height: 60,
+					treatment : 'static',
+					styles:{
+						src: img2,
+						height: 60,
+					}
+				});
+				world.add(rect);
+			}
+
+			
+// ********************************** DETECCIÓ DE COL·LISIONS  *************************************************************
+            world.on('collisions:detected', function(data) {
+			var hits = 0;
+                var c;
+                for (var i = 0, l = data.collisions.length; i < l; i++) {
+                    c = data.collisions[i];
+                    if ((c.bodyA.label === 'ball' && c.bodyB.label === 'minion') || (c.bodyB.label === 'ball' && c.bodyA.label === 'minion') ||
+					(c.bodyA.label === 'ball2' && c.bodyB.label === 'minion') || (c.bodyB.label === 'ball2' && c.bodyA.label === 'minion') ||
+					(c.bodyA.label === 'ball3' && c.bodyB.label === 'minion') || (c.bodyB.label === 'ball3' && c.bodyA.label === 'minion')
+					) {
+					puntuacion = puntuacion +1000;
+					hits = hits + 1;
+					//alert(hits);
+					//alert(puntuacion);
+					/*if (hits >= 6){
+						
+							
+					}*/
+					//alert(puntuacion);
+					//alert('aquíllegamos');	
+					// col·lisió ocell-capsa
+                        if ( // per evitar col·lisions múltiples
+                            Math.abs(c.bodyA.state.pos.y - c.bodyA.state.old.pos.y) > 1 || 
+                            Math.abs(c.bodyA.state.pos.x - c.bodyA.state.old.pos.x) > 2
+                        );		
+						if(puntuacion == 10000 && nivelActual<3){					//Cada golpe son 1000 puntos, al llegar a 10000 pasamos al mapa dos
+								nivelActual = nivelActual+1;
+								alert('Has conseguido  ' + puntuacion + '  puntos!!!');
+								alert('Siguiente pantalla');
+								inici = true;
+								//disparPrincipal = disparPrincipal +1;
+								reiniciar(nivelActual);
+								//alert(nivelActual);
+								}if(nivelActual ==3 && puntuacion ==10000){
+									alert("Enhorabuena, TU HAS GANADO!!!");
+									nivelActual = nivelActual -2;
+									puntuacion = 0;
+									reiniciar(nivelActual);
+									location.reload();						//Para hacer algo de trampa pongo un "reload" a la pagina, así carga de inicio
+								}
+						{
+							
+                            boom.currentTime = 0; // inicialitza posició so
+                            boom.play(); // reprodueix so
+                        }
+						if(c.bodyA.label === 'ball' && c.bodyB.label === 'maderaverti' && c.bodyC.label === 'maderahoriz' && c.bodyD.label === 'piedra'&& c.bodyE.label === 'minion'){
+						if ( // per evitar col·lisions múltiples
+                            Math.abs(c.bodyA.state.pos.y - c.bodyA.state.old.pos.y) > 1 || 
+                            Math.abs(c.bodyA.state.pos.x - c.bodyA.state.old.pos.x) > 2
+                        );	
+						    boom.currentTime = 0; // inicialitza posició so
+                            boom.play(); // reprodueix so
+						}
+                    }
+			
+                }
+            });
+// ********************************** FI DETECCIÓ DE COL·LISIONS  *************************************************************
+
+
+// ********************************** REINICAR  *************************************************************
+					function reiniciar(nivelActual)
+						{
+						var level2 = nivelActual;
+						//alert('llegamos aquí?');
+						inici = false;
+							if (!inici)
+							{	
+								var objetos =  world._bodies.length;
+								for (var i = 0; i < objetos; i+=1)
+								{	
+									world.remove(world._bodies[0]);	
+								}	
+								//alert('JAUUUUUUUUUUUUUUUU');
+								myAudio.pause();
+								puntuacion = 0;
+								
+								iniciarNivel(level2);							
+							}
+						}
+// ********************************** FI REINICAR  *************************************************************	
+
+
+// ********************************** CANVIAR TIPUS DISPAR  *************************************************************	
+var inGame2 = false;
+
+document.addEventListener('keydown', function( e ){
+			
+			if (!inGame2 && e.keyCode === 49){			//Si apretem el 1
+				metoDispars();
+			
+			}if (!inGame2 && e.keyCode === 50){			//Si apretem el 2
+			
+			}if(!inGame2 && e.keyCode === 51){			//Si apretem el 3
+			
+			}			
+});
+		
+// ********************************** FI CANVIAR TIPUS DISPAR  *************************************************************	
+						
+						
+						
+
+/*
+function killMinion(){
+    // count number of ufos destroyed
+    var killCount = 0;
+    world.subscribe('blow-up', function( data ){
+      
+      killCount++;
+      if ( killCount === crearMinion.length ){
+        world.publish('win-game');
+      }
+    });
+
+}
+
+function killMinion2(){
+    // blow up anything that touches a laser pulse
+    world.subscribe('collisions:detected', function( data ){
+      var collisions = data.collisions
+      ,col
+      ;
+      
+      for ( var i = 0, l = collisions.length; i < l; ++i ){
+        col = collisions[ i ];
+        
+        if ( col.bodyA.gameType === 'ball' || col.bodyB.gameType === 'minion' ){
+          if ( col.bodyA.blowUp ){
+            col.bodyA.blowUp();
+          } else if ( col.bodyB.blowUp ){
+            col.bodyB.blowUp();
+          }
+          return;
+        }
+      }
+    });
+}
+*/
+
+
+//*********************************************** MENU ********************************************************						
+
+
+//*********************************************** FI MENU ********************************************************		
+			
+			
+           // add things to the world
+            world.add([
+                Physics.behavior('constant-acceleration'),
+                Physics.behavior('body-impulse-response'),
+                Physics.behavior('body-collision-detection'),
+                Physics.behavior('sweep-prune'),
+                edgeBounce
+				
+            ]);
+
+            // subscribe to ticker to advance the simulation
+            Physics.util.ticker.on(function(time) {
+                world.step(time);
+            });
+        });
+		
+		
+			//Render de three.js
+			/*function renderizarEscena()
+						{	
+							GUIrenderer.render(escena, camera);
+						}*/
+
+    </script>
+	</div>
+</body>
